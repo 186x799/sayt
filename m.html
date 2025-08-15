@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mədinəm</title>
+    <meta name="description" content="3D Love Experience for Mədinə">
+    <!-- Three.js from reliable CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" integrity="sha512-dLxUelApnYxpLt6K2iomGngnHO83iUvZytA3YjDUCjT0HDOHKXnVYdf3hU4JjM8uEhxf9nD1/ey98U3t2vZ0qQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    
+    <!-- Preload fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;600;700&family=Great+Vibes&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Great Vibes', cursive;
+            overflow: hidden;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Loading screen */
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            transition: opacity 0.5s ease;
+        }
+
+        .loading.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loading-heart {
+            font-size: 3rem;
+            color: white;
+            animation: pulse 1s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+
+        /* Three.js Canvas */
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        #canvas-container canvas {
+            display: block;
+        }
+
+        /* Main Title */
+        .main-title {
+            font-size: 8rem;
+            font-weight: 700;
+            text-align: center;
+            color: white;
+            font-family: 'Great Vibes', cursive;
+            text-shadow: 
+                0 0 20px rgba(255, 255, 255, 0.8),
+                0 0 40px rgba(255, 255, 255, 0.6),
+                0 0 60px rgba(255, 255, 255, 0.4);
+            animation: titleGlow 3s ease-in-out infinite;
+            z-index: 10;
+            position: relative;
+            margin-bottom: 2rem;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+        }
+
+        @keyframes titleGlow {
+            0%, 100% { 
+                text-shadow: 
+                    0 0 20px rgba(255, 255, 255, 0.8),
+                    0 0 40px rgba(255, 192, 203, 0.6),
+                    0 0 60px rgba(255, 182, 193, 0.4);
+                transform: scale(1);
+            }
+            50% { 
+                text-shadow: 
+                    0 0 30px rgba(255, 255, 255, 1),
+                    0 0 60px rgba(255, 105, 180, 0.8),
+                    0 0 90px rgba(255, 20, 147, 0.6);
+                transform: scale(1.02);
+            }
+        }
+
+        .subtitle {
+            font-size: 2.5rem;
+            font-family: 'Dancing Script', cursive;
+            color: rgba(255, 255, 255, 0.9);
+            text-align: center;
+            z-index: 10;
+            position: relative;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+            animation: subtitleFloat 4s ease-in-out infinite;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+        }
+
+        @keyframes subtitleFloat {
+            0%, 100% { 
+                transform: translateY(0px);
+                opacity: 0.9;
+            }
+            50% { 
+                transform: translateY(-10px);
+                opacity: 1;
+            }
+        }
+
+        /* Error message styling */
+        .error-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 2rem;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 1000;
+            display: none;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .main-title {
+                font-size: 5rem;
+            }
+            .subtitle {
+                font-size: 2rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .main-title {
+                font-size: 3.5rem;
+            }
+            .subtitle {
+                font-size: 1.5rem;
+            }
+        }
+
+        @media (max-width: 320px) {
+            .main-title {
+                font-size: 2.5rem;
+            }
+            .subtitle {
+                font-size: 1.2rem;
+            }
+        }
+
+        /* Performance optimizations */
+        * {
+            will-change: auto;
+        }
+        
+        .main-title, .subtitle {
+            will-change: transform, opacity;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div class="loading" id="loading">
+        <div class="loading-heart">💖</div>
+    </div>
+
+    <!-- Error Message -->
+    <div class="error-message" id="error-message">
+        <h3>Üzgünəm! 😔</h3>
+        <p>3D effektləri yükləmək mümkün olmadı.<br>Səhifəni yenidən yükləməyi sınayın.</p>
+    </div>
+
+    <!-- Three.js Canvas Container -->
+    <div id="canvas-container"></div>
+
+    <!-- Main Content -->
+    <div class="main-title">Mədinə</div>
+    <div class="subtitle">Mədinəm</div>
+
+    <script>
+        // Global variables
+        let scene, camera, renderer, hearts = [];
+        let mouseX = 0, mouseY = 0;
+        let isInitialized = false;
+
+        // Check if Three.js loaded
+        function checkThreeJS() {
+            if (typeof THREE === 'undefined') {
+                console.error('Three.js yüklənmədi');
+                document.getElementById('error-message').style.display = 'block';
+                document.getElementById('loading').classList.add('hidden');
+                return false;
+            }
+            return true;
+        }
+
+        function createHeartGeometry() {
+            try {
+                const heartShape = new THREE.Shape();
+                
+                heartShape.moveTo(0, 0);
+                heartShape.bezierCurveTo(0, -0.3, -0.6, -0.3, -0.6, 0);
+                heartShape.bezierCurveTo(-0.6, 0.3, 0, 0.6, 0, 1);
+                heartShape.bezierCurveTo(0, 0.6, 0.6, 0.3, 0.6, 0);
+                heartShape.bezierCurveTo(0.6, -0.3, 0, -0.3, 0, 0);
+
+                const extrudeSettings = {
+                    depth: 0.3,
+                    bevelEnabled: true,
+                    bevelSegments: 8,
+                    steps: 2,
+                    bevelSize: 0.05,
+                    bevelThickness: 0.05
+                };
+
+                return new THREE.ExtrudeGeometry(heartShape, extrudeSettings);
+            } catch (error) {
+                console.error('Heart geometry yaradıla bilmədi:', error);
+                return new THREE.BoxGeometry(1, 1, 0.5); // Fallback
+            }
+        }
+
+        function init() {
+            try {
+                if (!checkThreeJS()) return;
+
+                // Scene
+                scene = new THREE.Scene();
+                
+                // Camera
+                camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                camera.position.z = 5;
+
+                // Renderer with error handling
+                renderer = new THREE.WebGLRenderer({ 
+                    alpha: true, 
+                    antialias: window.innerWidth > 826, // Antialias only on larger screens
+                    powerPreference: "high-performance"
+                });
+                
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.setClearColor(0x000000, 0);
+                
+                // Performance settings
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                
+                const container = document.getElementById('canvas-container');
+                container.appendChild(renderer.domElement);
+
+                // Create Heart Materials with reduced complexity for mobile
+                const heartMaterials = [
+                    new THREE.MeshPhongMaterial({ 
+                        color: 0xff1493,
+                        shininess: 30,
+                        transparent: true,
+                        opacity: 0.9
+                    }),
+                    new THREE.MeshPhongMaterial({ 
+                        color: 0xff69b4,
+                        shininess: 30,
+                        transparent: true,
+                        opacity: 0.9
+                    }),
+                    new THREE.MeshPhongMaterial({ 
+                        color: 0xff6347,
+                        shininess: 30,
+                        transparent: true,
+                        opacity: 0.9
+                    }),
+                    new THREE.MeshPhongMaterial({ 
+                        color: 0xdc143c,
+                        shininess: 30,
+                        transparent: true,
+                        opacity: 0.9
+                    })
+                ];
+
+                // Create Hearts with performance consideration
+                const heartGeometry = createHeartGeometry();
+                const heartCount = window.innerWidth > 826 ? 24 : 12; // Fewer hearts on mobile
+                
+                for (let i = 0; i < heartCount; i++) {
+                    const heart = new THREE.Mesh(
+                        heartGeometry, 
+                        heartMaterials[Math.floor(Math.random() * heartMaterials.length)]
+                    );
+                    
+                    // More controlled positioning - spread them around the edges
+                    const angle = (i / heartCount) * Math.PI * 2;
+                    const radius = window.innerWidth > 768 ? 8 : 6;
+                    
+                    heart.position.x = Math.cos(angle) * radius + (Math.random() - 0.5) * 3;
+                    heart.position.y = Math.sin(angle) * radius + (Math.random() - 0.5) * 3;
+                    heart.position.z = (Math.random() - 0.5) * 8;
+                    
+                    // Much smaller scale
+                    const scale = Math.random() * 0.15 + 0.1; // 0.1 to 0.25
+                    heart.scale.set(scale, scale, scale);
+                    
+                    // Random rotation
+                    heart.rotation.x = Math.random() * Math.PI;
+                    heart.rotation.y = Math.random() * Math.PI;
+                    heart.rotation.z = Math.random() * Math.PI;
+                    
+                    // Animation properties
+                    heart.userData = {
+                        rotationSpeed: {
+                            x: (Math.random() - 0.5) * 0.01,
+                            y: (Math.random() - 0.5) * 0.01,
+                            z: (Math.random() - 0.5) * 0.01
+                        },
+                        floatSpeed: Math.random() * 0.01 + 0.005,
+                        floatOffset: Math.random() * Math.PI * 2,
+                        originalY: heart.position.y,
+                        originalX: heart.position.x,
+                        originalZ: heart.position.z,
+                        originalScale: scale // Store original scale for pulse animation
+                    };
+                    
+                    scene.add(heart);
+                    hearts.push(heart);
+                }
+
+                // Optimized Lighting
+                const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+                scene.add(ambientLight);
+
+                const directionalLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
+                directionalLight1.position.set(1, 1, 1);
+                scene.add(directionalLight1);
+
+                const directionalLight2 = new THREE.DirectionalLight(0xff69b4, 0.4);
+                directionalLight2.position.set(-1, -1, 1);
+                scene.add(directionalLight2);
+
+                isInitialized = true;
+                
+                // Hide loading screen
+                setTimeout(() => {
+                    document.getElementById('loading').classList.add('hidden');
+                }, 500);
+
+            } catch (error) {
+                console.error('Initialization xətası:', error);
+                document.getElementById('error-message').style.display = 'block';
+                document.getElementById('loading').classList.add('hidden');
+            }
+        }
+
+        function animate() {
+            if (!isInitialized) return;
+            
+            requestAnimationFrame(animate);
+            
+            try {
+                const time = Date.now() * 0.001;
+                
+                // Animate hearts
+                hearts.forEach((heart, index) => {
+                    // Gentle rotation
+                    heart.rotation.x += heart.userData.rotationSpeed.x;
+                    heart.rotation.y += heart.userData.rotationSpeed.y;
+                    heart.rotation.z += heart.userData.rotationSpeed.z;
+                    
+                    // Subtle floating motion - stay near original position
+                    heart.position.y = heart.userData.originalY + 
+                        Math.sin(time * heart.userData.floatSpeed + heart.userData.floatOffset) * 0.8;
+                    heart.position.x = heart.userData.originalX + 
+                        Math.sin(time * heart.userData.floatSpeed * 0.7 + heart.userData.floatOffset) * 0.5;
+                    heart.position.z = heart.userData.originalZ + 
+                        Math.cos(time * heart.userData.floatSpeed * 0.5 + heart.userData.floatOffset) * 0.3;
+                    
+                    // Mouse interaction (very subtle)
+                    if (window.innerWidth > 768) {
+                        const mouseInfluence = 0.00005;
+                        heart.rotation.y += mouseX * mouseInfluence;
+                        heart.rotation.x += mouseY * mouseInfluence;
+                    }
+                    
+                    // Very subtle pulsing
+                    const pulse = 1 + Math.sin(time * 1.2 + index * 0.8) * 0.03;
+                    const currentScale = heart.userData.originalScale || heart.scale.x;
+                    heart.scale.setScalar(currentScale * pulse);
+                });
+                
+                // Camera movement (reduced for performance)
+                if (window.innerWidth > 768) {
+                    camera.position.x += (mouseX * 0.0005 - camera.position.x) * 0.03;
+                    camera.position.y += (-mouseY * 0.0005 - camera.position.y) * 0.03;
+                    camera.lookAt(scene.position);
+                }
+                
+                renderer.render(scene, camera);
+                
+            } catch (error) {
+                console.error('Animation xətası:', error);
+            }
+        }
+
+        // Event Listeners with error handling
+        function setupEventListeners() {
+            // Mouse movement (desktop only)
+            if (window.innerWidth > 768) {
+                document.addEventListener('mousemove', (event) => {
+                    mouseX = (event.clientX - window.innerWidth / 2);
+                    mouseY = (event.clientY - window.innerHeight / 2);
+                });
+            }
+
+            // Touch movement (mobile)
+            document.addEventListener('touchmove', (event) => {
+                if (event.touches[0]) {
+                    mouseX = (event.touches[0].clientX - window.innerWidth / 2);
+                    mouseY = (event.touches[0].clientY - window.innerHeight / 2);
+                }
+                event.preventDefault();
+            }, { passive: false });
+
+            // Window resize
+            window.addEventListener('resize', () => {
+                if (!isInitialized) return;
+                
+                try {
+                    camera.aspect = window.innerWidth / window.innerHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(window.innerWidth, window.innerHeight);
+                    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                } catch (error) {
+                    console.error('Resize xətası:', error);
+                }
+            });
+
+            // Click effect (limited to prevent performance issues)
+            document.addEventListener('click', (event) => {
+                if (!isInitialized || hearts.length >= 15) return;
+                
+                try {
+                    const heartGeometry = createHeartGeometry();
+                    const material = new THREE.MeshPhongMaterial({ 
+                        color: Math.random() * 0xffffff,
+                        shininess: 30,
+                        transparent: true,
+                        opacity: 0.9
+                    });
+                    
+                    const newHeart = new THREE.Mesh(heartGeometry, material);
+                    
+                    // Position calculation - closer to center
+                    const rect = renderer.domElement.getBoundingClientRect();
+                    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                    const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+                    
+                    const vector = new THREE.Vector3(x * 3, y * 3, 0);
+                    vector.unproject(camera);
+                    
+                    newHeart.position.copy(vector);
+                    newHeart.position.z = Math.random() * 2 - 1;
+                    
+                    // Much smaller scale for new hearts
+                    const scale = Math.random() * 0.1 + 0.08; // 0.08 to 0.18
+                    newHeart.scale.set(scale, scale, scale);
+                    
+                    newHeart.userData = {
+                        rotationSpeed: {
+                            x: (Math.random() - 0.5) * 0.008,
+                            y: (Math.random() - 0.5) * 0.008,
+                            z: (Math.random() - 0.5) * 0.008
+                        },
+                        floatSpeed: Math.random() * 0.01 + 0.005,
+                        floatOffset: Math.random() * Math.PI * 2,
+                        originalY: newHeart.position.y,
+                        originalX: newHeart.position.x,
+                        originalZ: newHeart.position.z,
+                        originalScale: scale
+                    };
+                    
+                    scene.add(newHeart);
+                    hearts.push(newHeart);
+                    
+                    // Remove hearts after some time to prevent accumulation
+                    setTimeout(() => {
+                        if (hearts.length > 12) {
+                            const oldHeart = hearts.shift();
+                            if (oldHeart && oldHeart.parent) {
+                                scene.remove(oldHeart);
+                                oldHeart.geometry.dispose();
+                                oldHeart.material.dispose();
+                            }
+                        }
+                    }, 10000);
+                    
+                } catch (error) {
+                    console.error('Click effect xətası:', error);
+                }
+            });
+        }
+
+        // Initialize everything when page loads
+        window.addEventListener('load', () => {
+            init();
+            setupEventListeners();
+            animate();
+        });
+
+        // Fallback initialization if load event doesn't fire
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                if (!isInitialized) {
+                    init();
+                    setupEventListeners();
+                    animate();
+                }
+            }, 1000);
+        });
+
+        // Error handling for the whole page
+        window.addEventListener('error', (event) => {
+            console.error('Səhifə xətası:', event.error);
+        });
+    </script>
+</body>
+</html>
